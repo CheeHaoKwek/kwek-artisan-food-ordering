@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Food Ordering</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="glass-panel" id="loadingPanel">
+        <div class="loader"></div>
+        <p style="text-align: center; margin-top: 1rem; color: var(--text-muted);">Loading today's menu...</p>
+    </div>
+
+    <div class="glass-panel" id="mainPanel" style="display: none;">
+        <h1 class="gradient-text" id="companyNameDisplay">Daily Food Order</h1>
+        <div id="statusBadge" class="status-badge">Open for Orders</div>
+        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Cutoff time: <strong id="cutoffTimeDisplay" style="color: white;"></strong></p>
+
+        <div id="menuContent">
+            <div class="menu-image-container">
+                <img id="menuImage" src="" alt="Today's Menu">
+            </div>
+
+            <form id="orderForm">
+                <input type="hidden" id="menuId" name="menu_id">
+                
+                <div class="form-group">
+                    <label for="guestName">Your Name</label>
+                    <input type="text" id="guestName" class="form-control" placeholder="e.g. John Doe" required>
+                </div>
+                
+                <div class="dashboard-grid" style="gap: 1rem;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="setName">Set Selection</label>
+                        <select id="setName" class="form-control" required>
+                            <option value="">Select a set...</option>
+                            <option value="Set A">Set A</option>
+                            <option value="Set B/C">Set B/C</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="quantity">Quantity</label>
+                        <input type="number" id="quantity" class="form-control" value="1" min="1" required>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 1.25rem;">
+                    <label>Add-ons</label>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--text-main); font-size: 0.95rem;">
+                            <input type="checkbox" id="addMeat" style="width: 1.2rem; height: 1.2rem; accent-color: var(--primary);"> Add Meat (+RM4.50)
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--text-main); font-size: 0.95rem;">
+                            <input type="checkbox" id="addVege" style="width: 1.2rem; height: 1.2rem; accent-color: var(--primary);"> Add Tofu/Egg/Vege (+RM2.00)
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="remark">Remark (Optional)</label>
+                    <input type="text" id="remark" class="form-control" placeholder="No spicy, less rice, etc.">
+                </div>
+
+                <button type="submit" class="btn" id="submitBtn">Submit Order</button>
+            </form>
+        </div>
+
+        <div id="closedContent" style="display: none; text-align: center; padding: 2rem 0;">
+            <svg style="width: 64px; height: 64px; color: var(--text-muted); margin: 0 auto 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            <h2 style="color: var(--text-main);">Orders are closed</h2>
+            <p style="color: var(--text-muted);">The order window for this menu has ended.</p>
+        </div>
+
+        <div id="noMenuContent" style="display: none; text-align: center; padding: 2rem 0;">
+            <svg style="width: 64px; height: 64px; color: var(--text-muted); margin: 0 auto 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            <h2 style="color: var(--text-main);">No Menu Available</h2>
+            <p style="color: var(--text-muted);">Today's menu hasn't been posted yet.</p>
+        </div>
+    </div>
+
+    <!-- Success Modal/Overlay -->
+    <div id="successOverlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 50; flex-direction:column; align-items: center; justify-content: center;">
+        <div class="glass-panel" style="text-align: center; max-width: 400px; margin: 2rem; animation: fadeIn 0.4s ease-out;">
+            <svg style="width: 64px; height: 64px; color: var(--success); margin: 0 auto 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <h2 style="color: var(--success); margin-bottom: 1rem;">Order Confirmed!</h2>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">Your order has been successfully submitted.</p>
+            <button class="btn" onclick="location.reload()">Place Another Order</button>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+</body>
+</html>

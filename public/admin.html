@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Daily Food</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="glass-panel" style="display: none; max-width: 400px; margin-top: 10vh;">
+        <h2 class="gradient-text" style="text-align: center;">Admin Login</h2>
+        <form id="loginForm">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="username" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" class="form-control" required>
+            </div>
+            <button type="submit" class="btn" id="loginBtn">Login</button>
+        </form>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboardScreen" class="admin-container" style="display: none; width: 100%;">
+        
+        <div class="top-nav">
+            <h2 class="gradient-text">Admin Dashboard</h2>
+            <div>
+                <button class="btn btn-outline btn-sm" id="openSettingsBtn" style="margin-right: 0.5rem;">⚙️ Settings</button>
+                <button class="btn btn-danger btn-sm" id="logoutBtn">Logout</button>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            
+            <!-- Menu Management -->
+            <div class="glass-panel" style="margin-bottom: 0;">
+                <div class="flex-between" style="margin-bottom: 1rem;">
+                    <h3>Today's Menu</h3>
+                    <span id="adminMenuStatus" class="status-badge">Loading...</span>
+                </div>
+                
+                <div id="adminMenuImageContainer" class="menu-image-container" style="display: none; max-height: 200px;">
+                    <img id="adminMenuImage" src="" alt="Menu" style="object-fit: cover; max-height: 200px; cursor: pointer;" title="Click to open image" onclick="window.open(this.src)">
+                </div>
+
+                <div class="flex-between" style="gap: 0.5rem;" id="menuControls">
+                    <button class="btn btn-sm" id="openMenuBtn" style="display: none; background: var(--success);">Open Orders</button>
+                    <button class="btn btn-danger btn-sm" id="closeMenuBtn" style="display: none;">Close Orders</button>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid var(--card-border); margin: 1.5rem 0;">
+
+                <h4>Upload New Menu</h4>
+                <form id="uploadForm" style="margin-top: 1rem;">
+                    <div class="form-group">
+                        <input type="file" id="menuImageFile" class="form-control" accept="image/*" required>
+                    </div>
+                    <button type="submit" class="btn btn-sm" id="uploadBtn">Upload & Draft</button>
+                </form>
+            </div>
+
+            <!-- Dashboard Stats -->
+            <div class="glass-panel" style="margin-bottom: 0;">
+                <h3>Summary</h3>
+                <div class="dashboard-grid" style="gap: 1rem; margin-top: 1.5rem;">
+                    <div class="stat-card" style="padding: 1rem;">
+                        <h3>Total Orders</h3>
+                        <div class="value" id="statOrders">0</div>
+                    </div>
+                    <div class="stat-card" style="padding: 1rem;">
+                        <h3>Set Breakdown</h3>
+                        <div id="statSets" style="margin-top:0.8rem; display:flex; flex-direction:column; gap:0.5rem; text-align:center;">-</div>
+                    </div>
+                    <div class="stat-card" style="padding: 1rem; border-color: var(--success); grid-column: 1 / -1;">
+                        <h3>Total Price</h3>
+                        <div class="value" id="statPrice" style="color: var(--success);">RM0.00</div>
+                    </div>
+                </div>
+
+                <h4 style="margin-top: 1.5rem;">Vendor Message</h4>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Copy this to send to the vendor via WhatsApp</p>
+                <textarea id="vendorMessageText" class="form-control" readonly style="min-height: 120px; font-size: 0.85rem;"></textarea>
+                <button class="btn btn-outline btn-sm" id="copyMessageBtn" style="margin-top: 0.5rem; width: 100%;">Copy Message</button>
+            </div>
+
+        </div>
+
+        <!-- Orders Table -->
+        <div class="glass-panel" style="margin-top: 1.5rem; max-width: 100%;">
+            <div class="flex-between">
+                <h3>Order Entries</h3>
+                <button class="btn btn-outline btn-sm" id="refreshOrdersBtn">↻ Refresh</button>
+            </div>
+            
+            <div class="table-container">
+                <table id="ordersTable">
+                    <thead>
+                        <tr>
+                            <th>Guest Name</th>
+                            <th>Set / Item</th>
+                            <th>Qty</th>
+                            <th>Add-ons</th>
+                            <th>Remark</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTableBody">
+                        <tr><td colspan="5" style="text-align: center;">Loading orders...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; flex-direction:column; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto;">
+        <div class="glass-panel" style="width: 100%; max-width: 600px; margin: auto; animation: fadeIn 0.3s ease-out; position: relative;">
+            <button id="closeSettingsBtn" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer;">&times;</button>
+            <h2>App Settings</h2>
+            
+            <form id="settingsForm" style="margin-top: 1.5rem;">
+                <div class="dashboard-grid" style="gap: 1rem;">
+                    <div class="form-group">
+                        <label>Company Name</label>
+                        <input type="text" id="setCompany" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Office Level</label>
+                        <input type="text" id="setLevel" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Reminder Time (HH:MM)</label>
+                        <input type="time" id="setReminder" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Cutoff Time (HH:MM)</label>
+                        <input type="time" id="setCutoff" class="form-control" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Timezone</label>
+                    <input type="text" id="setTimezone" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Teams Webhook URL</label>
+                    <input type="url" id="setWebhook" class="form-control" placeholder="https://your-teams-webhook-url">
+                </div>
+
+                <div class="form-group">
+                    <label>Vendor Message Template (use \n for line breaks)</label>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">Variables: {COMPANY_NAME}, {LEVEL}, DAY, DATE, {ORDER_LINES}</p>
+                    <textarea id="setTemplate" class="form-control" required></textarea>
+                </div>
+
+                <button type="submit" class="btn" id="saveSettingsBtn">Save Settings</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Environment Variables
+.env
+
+# Database logs and files
+data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Uploaded menu images
+uploads/
+
+# OS generated files
+.DS_Store
+Thumbs.db
