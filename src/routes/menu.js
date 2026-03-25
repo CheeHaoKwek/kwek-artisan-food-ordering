@@ -1,25 +1,16 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const db = require('../db');
+const { sql } = require('../db');
 const { verifyAdmin } = require('../middleware/auth');
 const teamsService = require('../services/teams');
+const { put } = require('@vercel/blob');
 
 const router = express.Router();
 
-// Setup Multer for image uploads
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, path.join(__dirname, '..', '..', 'uploads'));
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, 'menu-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
-
+// Setup Multer for memory storage (for Vercel compatibility)
 const upload = multer({
-    storage,
+    storage: multer.memoryStorage(),
     limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB limit
     fileFilter: (req, file, cb) => {
         const filetypes = /jpeg|jpg|png|webp|gif/;
@@ -33,65 +24,93 @@ const upload = multer({
 });
 
 // Menu Endpoints
-router.get('/active', verifyAdmin, (req, res) => {
-    const menu = db.prepare("SELECT * FROM menus WHERE status IN ('active', 'closed', 'draft') ORDER BY id DESC LIMIT 1").get();
-    res.json(menu || null);
+router.get('/active', verifyAdmin, async (req, res) => {
+    try {
+        const { rows } = await sql`SELECT * FROM menus WHERE status IN ('active', 'closed', 'draft') ORDER BY id DESC LIMIT 1`;
+        res.json(rows[0] || null);
+    } catch (e) {
+        res.status(500).json({ error: 'Database error' });
+    }
 });
 
-router.post('/upload', verifyAdmin, upload.single('menu_image'), (req, res) => {
+router.post('/upload', verifyAdmin, upload.single('menu_image'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No image file uploaded' });
     }
 
-    const imageUrl = `/uploads/${req.file.filename}`;
-    // Save as draft by default
-    const result = db.prepare(`
-        INSERT INTO menus (menu_date, image_url, status, uploaded_by) 
-        VALUES (date('now'), ?, 'draft', ?)
-    `).run(imageUrl, req.admin.id);
+    try {
+        // Upload to Vercel Blob
+        const blobOptions = {
+            access: 'public',
+            addRandomSuffix: true
+        };
+        const blob = await put(`menu-${Date.now()}${path.extname(req.file.originalname)}`, req.file.buffer, blobOptions);
 
-    res.json({ message: 'Menu uploaded successfully', menuId: result.lastInsertRowid, imageUrl });
+        const imageUrl = blob.url;
+        
+        // Save as draft by default
+        const result = await sql`
+            INSERT INTO menus (date, image_url, status) 
+            VALUES (CURRENT_DATE::VARCHAR, ${imageUrl}, 'draft')
+            RETURNING id
+        `;
+
+        res.json({ message: 'Menu uploaded successfully', menuId: result.rows[0].id, imageUrl });
+    } catch (err) {
+        console.error('Error uploading menu:', err);
+        res.status(500).json({ error: 'Failed to upload menu' });
+    }
 });
 
 router.post('/open/:id', verifyAdmin, async (req, res) => {
     const menuId = req.params.id;
 
-    // Close any currently active menus
-    db.prepare("UPDATE menus SET status = 'closed' WHERE status = 'active'").run();
-
-    // Open the requested menu
-    const result = db.prepare("UPDATE menus SET status = 'active' WHERE id = ?").run(menuId);
-    if (result.changes === 0) {
-        return res.status(404).json({ error: 'Menu not found' });
-    }
-
-    // Attempt to send Teams notification
     try {
-        await teamsService.sendMenuOpenedNotification();
-    } catch (err) {
-        console.error('Failed to notify Teams:', err);
-    }
+        // Close any currently active menus
+        await sql`UPDATE menus SET status = 'closed' WHERE status = 'active'`;
 
-    res.json({ message: 'Menu is now open for orders' });
+        // Open the requested menu
+        const result = await sql`UPDATE menus SET status = 'active' WHERE id = ${menuId}`;
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Menu not found' });
+        }
+
+        // Attempt to send Teams notification
+        try {
+            await teamsService.sendMenuOpenedNotification();
+        } catch (err) {
+            console.error('Failed to notify Teams:', err);
+        }
+
+        res.json({ message: 'Menu is now open for orders' });
+    } catch (e) {
+        res.status(500).json({ error: 'Database error' });
+    }
 });
 
 router.post('/close/:id', verifyAdmin, async (req, res) => {
     const menuId = req.params.id;
 
-    const result = db.prepare("UPDATE menus SET status = 'closed' WHERE id = ?").run(menuId);
-    if (result.changes === 0) {
-        return res.status(404).json({ error: 'Menu not found' });
-    }
-
     try {
-        await teamsService.sendOrdersClosedNotification();
-        const mailer = require('../services/mailer');
-        await mailer.sendOrderClosedEmail(process.env.SMTP_USER);
-    } catch (err) {
-        console.error('Failed to notify Teams or send Email:', err);
-    }
+        const result = await sql`UPDATE menus SET status = 'closed' WHERE id = ${menuId}`;
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Menu not found' });
+        }
 
-    res.json({ message: 'Menu orders are now closed' });
+        try {
+            await teamsService.sendOrdersClosedNotification();
+            const mailer = require('../services/mailer');
+            await mailer.sendOrderClosedEmail(process.env.SMTP_USER);
+        } catch (err) {
+            console.error('Failed to notify Teams or send Email:', err);
+        }
+
+        res.json({ message: 'Menu orders are now closed' });
+    } catch (e) {
+        res.status(500).json({ error: 'Database error' });
+    }
 });
 
 module.exports = router;

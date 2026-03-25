@@ -1,18 +1,27 @@
 const jwt = require('jsonwebtoken');
+const { sql } = require('../db');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'artisan_super_secret_key_change_me';
+const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_artisan_key';
 
-function verifyAdmin(req, res, next) {
+async function verifyAdmin(req, res, next) {
     const token = req.cookies.admin_token;
+    
     if (!token) {
-        return res.status(401).json({ error: 'Unauthorized: No admin token provided' });
+        return res.status(401).json({ error: 'Authentication required' });
     }
+
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
-        req.admin = decoded;
+        const { rows } = await sql`SELECT id, username FROM users WHERE id = ${decoded.id}`;
+        
+        if (rows.length === 0) {
+            return res.status(401).json({ error: 'User no longer exists' });
+        }
+        
+        req.admin = rows[0];
         next();
     } catch (err) {
-        return res.status(401).json({ error: 'Unauthorized: Invalid session token' });
+        res.status(401).json({ error: 'Invalid or expired token' });
     }
 }
 
