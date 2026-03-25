@@ -193,6 +193,7 @@ router.get('/vendor-message', verifyAdmin, async (req, res) => {
         allRemarks.forEach(r => orderLines.push(r));
 
         const dateObj = new Date();
+        dateObj.setDate(dateObj.getDate() + 1); // Vendor message is for tomorrow's order
         const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const dayName = days[dateObj.getDay()];
         const formattedDate = `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
