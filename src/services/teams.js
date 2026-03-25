@@ -45,10 +45,35 @@ function sendPayload(webhookUrl, payload) {
     });
 }
 
-function createAdaptiveCardPayload(title, text) {
+function createAdaptiveCardPayload(title, text, mentionEveryone = false) {
     const appUrl = process.env.APP_URL || "http://localhost:3000";
 
-    return {
+    const bodyBlocks = [];
+
+    if (mentionEveryone) {
+        bodyBlocks.push({
+            "type": "TextBlock",
+            "text": "<at>everyone</at>",
+            "wrap": true
+        });
+    }
+
+    bodyBlocks.push(
+        {
+            "type": "TextBlock",
+            "size": "Large",
+            "weight": "Bolder",
+            "text": title,
+            "wrap": true
+        },
+        {
+            "type": "TextBlock",
+            "text": text,
+            "wrap": true
+        }
+    );
+
+    const payload = {
         "type": "message",
         "attachments": [
             {
@@ -57,20 +82,19 @@ function createAdaptiveCardPayload(title, text) {
                     "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
                     "type": "AdaptiveCard",
                     "version": "1.4",
-                    "body": [
-                        {
-                            "type": "TextBlock",
-                            "size": "Large",
-                            "weight": "Bolder",
-                            "text": title,
-                            "wrap": true
-                        },
-                        {
-                            "type": "TextBlock",
-                            "text": text,
-                            "wrap": true
-                        }
-                    ],
+                    "msteams": mentionEveryone ? {
+                        "entities": [
+                            {
+                                "type": "mention",
+                                "text": "<at>everyone</at>",
+                                "mentioned": {
+                                    "id": "everyone",
+                                    "name": "everyone"
+                                }
+                            }
+                        ]
+                    } : undefined,
+                    "body": bodyBlocks,
                     "actions": [
                         {
                             "type": "Action.OpenUrl",
@@ -82,6 +106,8 @@ function createAdaptiveCardPayload(title, text) {
             }
         ]
     };
+
+    return payload;
 }
 
 async function sendMenuOpenedNotification() {
@@ -92,7 +118,8 @@ async function sendMenuOpenedNotification() {
 
         const payload = createAdaptiveCardPayload(
             "🍔 Today's Lunch Menu is Open!", 
-            `The daily menu has been updated. Please check the portal and submit your orders.\n\n**Cutoff time: ${settings.cutoff_time}**`
+            `The daily menu has been updated. Please check the portal and submit your orders.\n\n**Cutoff time: ${settings.cutoff_time}**`,
+            true // @everyone mention
         );
 
         return sendPayload(settings.teams_webhook_url, payload);

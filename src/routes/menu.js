@@ -100,11 +100,10 @@ router.post('/close/:id', verifyAdmin, async (req, res) => {
         }
 
         try {
-            await teamsService.sendOrdersClosedNotification();
             const mailer = require('../services/mailer');
             await mailer.sendOrderClosedEmail(process.env.SMTP_USER);
         } catch (err) {
-            console.error('Failed to notify Teams or send Email:', err);
+            console.error('Failed to send closed email:', err);
         }
 
         res.json({ message: 'Menu orders are now closed' });
