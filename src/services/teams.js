@@ -75,6 +75,20 @@ function createAdaptiveCardPayload(title, text, mentionEveryone = false) {
 
     const payload = {
         "type": "message",
+        // Top-level text + entities required for @everyone in group chat webhooks
+        ...(mentionEveryone ? {
+            "text": "<at>everyone</at>",
+            "entities": [
+                {
+                    "type": "mention",
+                    "text": "<at>everyone</at>",
+                    "mentioned": {
+                        "id": "everyone",
+                        "name": "everyone"
+                    }
+                }
+            ]
+        } : {}),
         "attachments": [
             {
                 "contentType": "application/vnd.microsoft.card.adaptive",
@@ -82,18 +96,6 @@ function createAdaptiveCardPayload(title, text, mentionEveryone = false) {
                     "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
                     "type": "AdaptiveCard",
                     "version": "1.4",
-                    "msteams": mentionEveryone ? {
-                        "entities": [
-                            {
-                                "type": "mention",
-                                "text": "<at>everyone</at>",
-                                "mentioned": {
-                                    "id": "everyone",
-                                    "name": "everyone"
-                                }
-                            }
-                        ]
-                    } : undefined,
                     "body": bodyBlocks,
                     "actions": [
                         {

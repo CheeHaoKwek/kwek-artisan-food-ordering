@@ -193,15 +193,24 @@ router.get('/vendor-message', verifyAdmin, async (req, res) => {
         allRemarks.forEach(r => orderLines.push(r));
 
         const dateObj = new Date();
-        dateObj.setDate(dateObj.getDate() + 1);
         const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const dayName = days[dateObj.getDay()];
         const formattedDate = `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
+
+        // Format cutoff time to 12h if needed (e.g. 08:00 -> 8:00am)
+        let cutoffDisplay = settings.cutoff_time || '';
+        if (cutoffDisplay) {
+            const [h, m] = cutoffDisplay.split(':').map(Number);
+            const ampm = h >= 12 ? 'pm' : 'am';
+            const h12 = h % 12 || 12;
+            cutoffDisplay = `${h12}:${String(m).padStart(2, '0')}${ampm}`;
+        }
 
         let message = settings.vendor_message_template;
         message = message.replace(/{LEVEL}/g, settings.office_level || '');
         message = message.replace(/{COMPANY_NAME}/g, settings.company_name || '');
         message = message.replace(/{ORDER_LINES}/g, orderLines.join('\\n'));
+        message = message.replace(/{CUTOFF_TIME}/g, cutoffDisplay);
         message = message.replace(/DAY/g, dayName);
         message = message.replace(/DATE/g, formattedDate);
 
