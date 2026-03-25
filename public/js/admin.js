@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function loadDashboardData() {
         // Load Menu Data
-        const menuRes = await fetch('/api/admin/menu/active');
+        const menuRes = await fetch('/api/menu/active');
         const menu = await menuRes.json();
         
         const badge = document.getElementById('adminMenuStatus');
@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         btn.disabled = true;
         btn.textContent = 'Uploading...';
 
-        const res = await fetch('/api/admin/menu/upload', {
+        const res = await fetch('/api/menu/upload', {
             method: 'POST',
             body: formData
         });
@@ -175,13 +175,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Menu Controls
     document.getElementById('openMenuBtn').addEventListener('click', async () => {
         if (!currentMenuId) return;
-        await fetch(`/api/admin/menu/open/${currentMenuId}`, { method: 'POST' });
+        await fetch(`/api/menu/open/${currentMenuId}`, { method: 'POST' });
         loadDashboardData();
     });
 
     document.getElementById('closeMenuBtn').addEventListener('click', async () => {
         if (!currentMenuId) return;
-        await fetch(`/api/admin/menu/close/${currentMenuId}`, { method: 'POST' });
+        await fetch(`/api/menu/close/${currentMenuId}`, { method: 'POST' });
         loadDashboardData();
     });
 
