@@ -23,6 +23,15 @@ async function isPastCutoff() {
     } catch (e) { return false; }
 }
 
+router.get('/colleagues', async (req, res) => {
+    try {
+        const { rows } = await sql`SELECT * FROM colleagues ORDER BY name ASC`;
+        res.json({ colleagues: rows });
+    } catch (error) {
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
 router.get('/menu', async (req, res) => {
     try {
         const { rows: menuRows } = await sql`SELECT * FROM menus WHERE status = 'active' ORDER BY id DESC LIMIT 1`;

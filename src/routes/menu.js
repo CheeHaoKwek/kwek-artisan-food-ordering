@@ -76,6 +76,12 @@ router.post('/open/:id', verifyAdmin, async (req, res) => {
             return res.status(404).json({ error: 'Menu not found' });
         }
 
+        // --- NEW: Data Cleanup ---
+        // Delete all orders that do not belong to the current menu
+        await sql`DELETE FROM orders WHERE menu_id != ${menuId}`;
+        // Delete all menus except the current one
+        await sql`DELETE FROM menus WHERE id != ${menuId}`;
+
         // Attempt to send Teams notification
         try {
             await teamsService.sendMenuOpenedNotification();

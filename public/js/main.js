@@ -38,6 +38,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('menuImage').src = data.menu.image_url;
         document.getElementById('menuId').value = data.menu.id;
 
+        // Fetch Colleagues
+        try {
+            const colRes = await fetch('/api/public/colleagues');
+            const colData = await colRes.json();
+            const guestSelect = document.getElementById('guestName');
+            if (colData.colleagues) {
+                colData.colleagues.forEach(c => {
+                    const option = document.createElement('option');
+                    option.value = c.name;
+                    option.textContent = c.name;
+                    guestSelect.appendChild(option);
+                });
+            }
+        } catch (err) {
+            console.error('Failed to load colleagues', err);
+        }
+
         // Auto-fill name if stored locally to lower friction
         const savedName = localStorage.getItem('guestName');
         if (savedName) document.getElementById('guestName').value = savedName;
@@ -47,14 +64,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         alert('Failed to connect to server.');
     }
 
-    // Submit order
+    // Submit order intercept for confirmation
     const form = document.getElementById('orderForm');
     if (form) {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Submitting...';
+            
+            document.getElementById('confirmName').textContent = document.getElementById('guestName').value;
+            
+            let addons = [];
+            if (document.getElementById('addMeat').checked) addons.push('Meat');
+            if (document.getElementById('addVege').checked) addons.push('Tofu/Egg/Vege');
+            let addonStr = addons.length ? ` (+${addons.join(', ')})` : '';
+            
+            document.getElementById('confirmSet').textContent = document.getElementById('setName').value + addonStr;
+            document.getElementById('confirmQty').textContent = document.getElementById('quantity').value;
+            
+            document.getElementById('confirmOverlay').style.display = 'flex';
+        });
+    }
+
+    const closeConfirmBtn = document.getElementById('closeConfirmBtn');
+    if (closeConfirmBtn) {
+        closeConfirmBtn.addEventListener('click', () => {
+            document.getElementById('confirmOverlay').style.display = 'none';
+        });
+    }
+
+    const finalSubmitBtn = document.getElementById('finalSubmitBtn');
+    if (finalSubmitBtn) {
+        finalSubmitBtn.addEventListener('click', async () => {
+            finalSubmitBtn.disabled = true;
+            finalSubmitBtn.textContent = 'Submitting...';
 
             const payload = {
                 menu_id: document.getElementById('menuId').value,
@@ -66,7 +107,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 remark: document.getElementById('remark').value
             };
 
-            // Save name for next time
             localStorage.setItem('guestName', payload.guest_name);
 
             try {
@@ -79,16 +119,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const result = await res.json();
                 
                 if (res.ok) {
+                    document.getElementById('confirmOverlay').style.display = 'none';
                     document.getElementById('successOverlay').style.display = 'flex';
                 } else {
                     alert('Error: ' + (result.error || 'Failed to submit'));
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Submit Order';
+                    finalSubmitBtn.disabled = false;
+                    finalSubmitBtn.textContent = 'Confirm & Submit';
                 }
             } catch (err) {
                 alert('Network error while submitting.');
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Submit Order';
+                finalSubmitBtn.disabled = false;
+                finalSubmitBtn.textContent = 'Confirm & Submit';
             }
         });
     }

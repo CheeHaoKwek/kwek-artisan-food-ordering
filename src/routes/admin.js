@@ -223,4 +223,34 @@ router.get('/vendor-message', verifyAdmin, async (req, res) => {
     }
 });
 
+// --- Colleagues Routes ---
+router.get('/colleagues', verifyAdmin, async (req, res) => {
+    try {
+        const { rows } = await sql`SELECT * FROM colleagues ORDER BY name ASC`;
+        res.json({ colleagues: rows });
+    } catch (e) {
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+router.post('/colleagues', verifyAdmin, async (req, res) => {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: 'Name is required' });
+    try {
+        await sql`INSERT INTO colleagues (name) VALUES (${name.trim()})`;
+        res.json({ message: 'Colleague added successfully' });
+    } catch (e) {
+        res.status(500).json({ error: 'Database error or duplicate name' });
+    }
+});
+
+router.delete('/colleagues/:id', verifyAdmin, async (req, res) => {
+    try {
+        await sql`DELETE FROM colleagues WHERE id = ${req.params.id}`;
+        res.json({ message: 'Colleague deleted successfully' });
+    } catch (e) {
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
 module.exports = router;

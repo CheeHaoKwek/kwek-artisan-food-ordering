@@ -54,6 +54,13 @@ async function initDB() {
             );
         `;
 
+        await sql`
+            CREATE TABLE IF NOT EXISTS colleagues (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) UNIQUE NOT NULL
+            );
+        `;
+
         // Check app settings
         const { rows: settingsRows } = await sql`SELECT * FROM app_settings WHERE id = 1`;
         if (settingsRows.length === 0) {
@@ -70,6 +77,19 @@ async function initDB() {
                     '1){office_level}\n{company_name}\n{ORDER_LINES}'
                 )
             `;
+        }
+
+        // Check colleagues
+        const { rows: colleagueRows } = await sql`SELECT id FROM colleagues LIMIT 1`;
+        if (colleagueRows.length === 0) {
+            const defaultColleagues = [
+                'Di Yao', 'Isaac', 'Jacqueline', 'Jason', 'Jayron', 
+                'Kwek', 'Lai', 'Michael', 'Ru Fang', 'Sean', 
+                'Soo Hao', 'Vincent', 'Wen Xuan', 'Willy'
+            ];
+            for (const name of defaultColleagues) {
+                await sql`INSERT INTO colleagues (name) VALUES (${name}) ON CONFLICT DO NOTHING`;
+            }
         }
 
         initialized = true;

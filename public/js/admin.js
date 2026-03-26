@@ -110,6 +110,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Load Orders Table
         loadOrdersTable();
+        
+        // Load Colleagues Table
+        loadColleaguesTable();
     }
 
     async function loadOrdersTable() {
@@ -135,12 +138,94 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${addonText}</td>
                 <td>${o.remark || '<span style="color:var(--text-muted)">-</span>'}</td>
                 <td style="color: var(--text-muted); font-size: 0.85rem;">
-                    ${new Date(o.created_at + 'Z').toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    ${new Date(o.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                 </td>
             </tr>
             `;
         }).join('');
     }
+
+    async function loadColleaguesTable() {
+        const tbody = document.getElementById('colleaguesTableBody');
+        try {
+            const res = await fetch('/api/admin/colleagues');
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+
+            if (!data.colleagues || data.colleagues.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="2" style="text-align: center; color: var(--text-muted);">No colleagues found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.colleagues.map(c => `
+                <tr>
+                    <td style="font-weight: 600;">${c.name}</td>
+                    <td style="text-align: right;">
+                        <button class="btn btn-danger btn-sm" onclick="deleteColleague(${c.id})">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        } catch (e) {
+            tbody.innerHTML = '<tr><td colspan="2" style="text-align: center; color: var(--text-muted);">Failed to load</td></tr>';
+        }
+    }
+
+    // Expose delete to window so inline onclick works
+    window.deleteColleague = async (id) => {
+        if (!confirm('Are you sure you want to delete this colleague?')) return;
+        try {
+            const res = await fetch(`/api/admin/colleagues/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                loadColleaguesTable();
+            } else {
+                alert('Failed to delete colleague');
+            }
+        } catch (e) {
+            alert('Error deleting colleague');
+        }
+    };
+
+    // Add Colleague Modal Logic
+    const addColleagueModal = document.getElementById('addColleagueModal');
+    
+    document.getElementById('openAddColleagueBtn')?.addEventListener('click', () => {
+        addColleagueModal.style.display = 'flex';
+        setTimeout(() => document.getElementById('newColleagueName').focus(), 100);
+    });
+
+    document.getElementById('closeAddColleagueBtn')?.addEventListener('click', () => {
+        addColleagueModal.style.display = 'none';
+    });
+
+    document.getElementById('addColleagueForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const input = document.getElementById('newColleagueName');
+        const name = input.value.trim();
+        if (!name) return;
+        
+        const btn = e.target.querySelector('button');
+        btn.disabled = true;
+
+        try {
+            const res = await fetch('/api/admin/colleagues', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+
+            if (res.ok) {
+                input.value = '';
+                addColleagueModal.style.display = 'none';
+                loadColleaguesTable();
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Failed to add colleague');
+            }
+        } catch (e) {
+            alert('Error adding colleague');
+        }
+        btn.disabled = false;
+    });
 
     document.getElementById('refreshOrdersBtn').addEventListener('click', loadDashboardData);
 
