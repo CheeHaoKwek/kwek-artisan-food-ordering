@@ -33,9 +33,13 @@
         <div class="top-nav">
             <h2 class="gradient-text">Admin Dashboard</h2>
             <div>
-                <button class="btn btn-outline btn-sm" id="openSettingsBtn" style="margin-right: 0.5rem;">⚙️
-                    Settings</button>
-                <button class="btn btn-danger btn-sm" id="logoutBtn">Logout</button>
+                <button class="btn btn-outline btn-sm" id="openSettingsBtn" style="margin-right: 0.5rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;" title="Settings">
+                    <span>⚙️</span><span class="btn-text">Settings</span>
+                </button>
+                <button class="btn btn-danger btn-sm" id="logoutBtn" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;" title="Logout">
+                    <svg style="width: 15px; height: 15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    <span class="btn-text">Logout</span>
+                </button>
             </div>
         </div>
 
@@ -166,7 +170,7 @@
             <h2>App Settings</h2>
 
             <form id="settingsForm" style="margin-top: 1.5rem;">
-                <div class="dashboard-grid" style="gap: 1rem;">
+                <div class="dashboard-grid" style="column-gap: 1.5rem; row-gap: 0;">
                     <div class="form-group">
                         <label>Company Name</label>
                         <input type="text" id="setCompany" class="form-control" required>
