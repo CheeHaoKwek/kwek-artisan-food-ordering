@@ -121,7 +121,7 @@ async function sendMenuOpenedNotification() {
         const payload = createAdaptiveCardPayload(
             "🍔 Today's Lunch Menu is Open!", 
             `The daily menu has been updated. Please check the portal and submit your orders.\n\n**Cutoff time: ${settings.cutoff_time}**`,
-            true // @everyone mention
+            false // @everyone mention disabled
         );
 
         return sendPayload(settings.teams_webhook_url, payload);
