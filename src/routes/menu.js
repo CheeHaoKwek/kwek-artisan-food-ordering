@@ -4,6 +4,7 @@ const path = require('path');
 const { sql } = require('../db');
 const { verifyAdmin } = require('../middleware/auth');
 const teamsService = require('../services/teams');
+const mailer = require('../services/mailer');
 const { put } = require('@vercel/blob');
 
 const router = express.Router();
@@ -64,13 +65,14 @@ router.post('/upload', verifyAdmin, upload.single('menu_image'), async (req, res
 
 router.post('/open/:id', verifyAdmin, async (req, res) => {
     const menuId = req.params.id;
+    const { setBName } = req.body;
 
     try {
         // Close any currently active menus
         await sql`UPDATE menus SET status = 'closed' WHERE status = 'active'`;
 
-        // Open the requested menu
-        const result = await sql`UPDATE menus SET status = 'active' WHERE id = ${menuId}`;
+        // Open the requested menu and set the chosen Set B/C name
+        const result = await sql`UPDATE menus SET status = 'active', set_b_name = ${setBName || 'Set B'} WHERE id = ${menuId}`;
         
         if (result.rowCount === 0) {
             return res.status(404).json({ error: 'Menu not found' });
@@ -106,7 +108,6 @@ router.post('/close/:id', verifyAdmin, async (req, res) => {
         }
 
         try {
-            const mailer = require('../services/mailer');
             await mailer.sendOrderClosedEmail(process.env.SMTP_USER);
         } catch (err) {
             console.error('Failed to send closed email:', err);

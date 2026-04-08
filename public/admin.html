@@ -55,8 +55,19 @@
                 <div id="adminMenuImageContainer" class="menu-image-container"
                     style="display: none; max-height: 200px;">
                     <img id="adminMenuImage" src="" alt="Menu"
-                        style="object-fit: cover; max-height: 200px; cursor: pointer;" title="Click to open image"
-                        onclick="window.open(this.src)">
+                        style="object-fit: cover; max-height: 200px; cursor: pointer;" title="Click to open image">
+                </div>
+
+                <div id="setSelectionContainer" style="display: none; margin-bottom: 1rem;">
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Select daily second set:</p>
+                    <div style="display: flex; gap: 1.5rem; justify-content: center;">
+                        <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                            <input type="radio" name="setBChoice" value="Set B" checked style="width:1.1rem; height:1.1rem; accent-color:var(--primary);"> Set B
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                            <input type="radio" name="setBChoice" value="Set C" style="width:1.1rem; height:1.1rem; accent-color:var(--primary);"> Set C
+                        </label>
+                    </div>
                 </div>
 
                 <div class="flex-between" style="gap: 0.5rem;" id="menuControls">
@@ -190,6 +201,11 @@
                 </div>
 
                 <div class="form-group">
+                    <label>Coordinator Name</label>
+                    <input type="text" id="setCoordinator" class="form-control" required>
+                </div>
+
+                <div class="form-group">
                     <label>Timezone</label>
                     <input type="text" id="setTimezone" class="form-control" required>
                 </div>
@@ -202,7 +218,7 @@
                 <div class="form-group">
                     <label>Vendor Message Template (use \n for line breaks)</label>
                     <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">Variables:
-                        {COMPANY_NAME}, {LEVEL}, DAY, DATE, {ORDER_LINES}</p>
+                        {COMPANY_NAME}, {LEVEL}, {DAY}, {DATE}, {CUTOFF_TIME}, {ORDER_LINES}</p>
                     <textarea id="setTemplate" class="form-control" required></textarea>
                 </div>
 

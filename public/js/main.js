@@ -4,12 +4,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const menuContent = document.getElementById('menuContent');
     const closedContent = document.getElementById('closedContent');
     const noMenuContent = document.getElementById('noMenuContent');
-    
+
     // Fetch menu
     try {
         const response = await fetch('/api/public/menu');
         const data = await response.json();
-        
+
         loadingPanel.style.display = 'none';
         mainPanel.style.display = 'block';
 
@@ -37,6 +37,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Apply active menu
         document.getElementById('menuImage').src = data.menu.image_url;
         document.getElementById('menuId').value = data.menu.id;
+
+        // Dynamic Set Selection
+        const setSelect = document.getElementById('setName');
+        const setA = document.createElement('option');
+        setA.value = 'Set A';
+        setA.textContent = 'Set A';
+        setSelect.appendChild(setA);
+
+        const setB = document.createElement('option');
+        setB.value = data.menu.set_b_name || 'Set B';
+        setB.textContent = data.menu.set_b_name || 'Set B';
+        setSelect.appendChild(setB);
 
         // Fetch Colleagues
         try {
@@ -69,17 +81,53 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (form) {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             document.getElementById('confirmName').textContent = document.getElementById('guestName').value;
-            
+
             let addons = [];
             if (document.getElementById('addMeat').checked) addons.push('Meat');
             if (document.getElementById('addVege').checked) addons.push('Tofu/Egg/Vege');
             let addonStr = addons.length ? ` (+${addons.join(', ')})` : '';
-            
+
             document.getElementById('confirmSet').textContent = document.getElementById('setName').value + addonStr;
             document.getElementById('confirmQty').textContent = document.getElementById('quantity').value;
-            
+
+            // --- WFH WARNING LOGIC (Tuesday & Friday Only) ---
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const dayOfWeek = tomorrow.getDay(); // 0-6 (Sun-Sat)
+            const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const targetDayName = dayNames[dayOfWeek].toUpperCase();
+
+            const warningOverlay = document.getElementById('wfhWarningOverlay');
+            const warningText = document.getElementById('wfhWarningText');
+            const warningImage = document.getElementById('wfhWarningImage');
+
+            if (dayOfWeek === 2 || dayOfWeek === 5) { // Tuesday (2) or Friday (5)
+                warningText.innerHTML = `Tomorrow is <span style="font-size: 1.8rem; font-weight: 800; color: #ff9800; display: block; margin: 0.5rem 0;">${targetDayName}</span> 
+                Are you sure you are coming to the office and not working from home? <br><br>
+                <span style="color: #ff4444; font-size: 0.9rem;">* Accidental payment will be considered as donation~~.</span>`;
+                
+                warningImage.src = dayOfWeek === 2 ? '/images/tuesday-warning.jpeg' : '/images/friday-warning.jpeg';
+                warningOverlay.style.display = 'flex';
+            } else {
+                // Not Tuesday/Friday, go directly to confirmation
+                document.getElementById('confirmOverlay').style.display = 'flex';
+            }
+        });
+    }
+
+    const wfhBackBtn = document.getElementById('wfhBackBtn');
+    if (wfhBackBtn) {
+        wfhBackBtn.addEventListener('click', () => {
+            document.getElementById('wfhWarningOverlay').style.display = 'none';
+        });
+    }
+
+    const wfhConfirmBtn = document.getElementById('wfhConfirmBtn');
+    if (wfhConfirmBtn) {
+        wfhConfirmBtn.addEventListener('click', () => {
+            document.getElementById('wfhWarningOverlay').style.display = 'none';
             document.getElementById('confirmOverlay').style.display = 'flex';
         });
     }
@@ -115,9 +163,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                
+
                 const result = await res.json();
-                
+
                 if (res.ok) {
                     document.getElementById('confirmOverlay').style.display = 'none';
                     document.getElementById('successOverlay').style.display = 'flex';
@@ -131,6 +179,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 finalSubmitBtn.disabled = false;
                 finalSubmitBtn.textContent = 'Confirm & Submit';
             }
+        });
+    }
+
+    const reloadBtn = document.getElementById('successReloadBtn');
+    if (reloadBtn) {
+        reloadBtn.addEventListener('click', () => {
+            location.reload();
         });
     }
 });

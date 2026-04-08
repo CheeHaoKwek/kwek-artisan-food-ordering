@@ -70,15 +70,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (menu.status === 'draft' || menu.status === 'closed') {
                 openBtn.style.display = 'inline-block';
                 closeBtn.style.display = 'none';
+                document.getElementById('setSelectionContainer').style.display = 'block';
             } else if (menu.status === 'active') {
                 openBtn.style.display = 'none';
                 closeBtn.style.display = 'inline-block';
+                document.getElementById('setSelectionContainer').style.display = 'none';
             }
         } else {
             badge.textContent = 'NO MENU';
             imgContainer.style.display = 'none';
             openBtn.style.display = 'none';
             closeBtn.style.display = 'none';
+            document.getElementById('setSelectionContainer').style.display = 'none';
         }
 
         // Load Summary Data
@@ -90,9 +93,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             let setsHtml = '';
             if (summary.setGroups && Object.keys(summary.setGroups).length > 0) {
-                for (const [setName, qty] of Object.entries(summary.setGroups)) {
-                    setsHtml += `<div style="font-size:1.25rem; font-weight:600; color:var(--text-main);">${setName}: <span style="color:var(--primary); font-size:1.5rem;">${qty}</span></div>`;
-                }
+                Object.entries(summary.setGroups)
+                    .sort((a, b) => a[0].localeCompare(b[0]))
+                    .forEach(([setName, qty]) => {
+                        setsHtml += `<div style="font-size:1.25rem; font-weight:600; color:var(--text-main);">${setName}: <span style="color:var(--primary); font-size:1.5rem;">${qty}</span></div>`;
+                    });
             }
             document.getElementById('statSets').innerHTML = setsHtml || '<span style="color:var(--text-muted)">0</span>';
 
@@ -161,7 +166,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <tr>
                     <td style="font-weight: 600;">${c.name}</td>
                     <td style="text-align: right;">
-                        <button class="btn btn-danger btn-sm" onclick="deleteColleague(${c.id})">Delete</button>
+                        <button class="btn btn-danger btn-sm delete-colleague-btn" data-id="${c.id}">Delete</button>
                     </td>
                 </tr>
             `).join('');
@@ -170,20 +175,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // Expose delete to window so inline onclick works
-    window.deleteColleague = async (id) => {
-        if (!confirm('Are you sure you want to delete this colleague?')) return;
-        try {
-            const res = await fetch(`/api/admin/colleagues/${id}`, { method: 'DELETE' });
-            if (res.ok) {
-                loadColleaguesTable();
-            } else {
-                alert('Failed to delete colleague');
+    // Event Delegation for Colleague Deletion
+    document.getElementById('colleaguesTableBody').addEventListener('click', async (e) => {
+        if (e.target.classList.contains('delete-colleague-btn')) {
+            const id = e.target.getAttribute('data-id');
+            if (confirm('Are you sure you want to delete this colleague?')) {
+                try {
+                    const res = await fetch(`/api/admin/colleagues/${id}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        loadColleaguesTable();
+                    } else {
+                        alert('Failed to delete colleague');
+                    }
+                } catch (e) {
+                    alert('Error deleting colleague');
+                }
             }
-        } catch (e) {
-            alert('Error deleting colleague');
         }
-    };
+    });
+
+    // Menu Image Listener
+    document.getElementById('adminMenuImage').addEventListener('click', function() {
+        if (this.src) window.open(this.src);
+    });
 
     // Add Colleague Modal Logic
     const addColleagueModal = document.getElementById('addColleagueModal');
@@ -260,7 +274,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Menu Controls
     document.getElementById('openMenuBtn').addEventListener('click', async () => {
         if (!currentMenuId) return;
-        await fetch(`/api/menu/open/${currentMenuId}`, { method: 'POST' });
+        const setBName = document.querySelector('input[name="setBChoice"]:checked').value;
+        await fetch(`/api/menu/open/${currentMenuId}`, { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ setBName })
+        });
         loadDashboardData();
     });
 
@@ -291,6 +310,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('setLevel').value = s.office_level;
             document.getElementById('setReminder').value = s.reminder_time;
             document.getElementById('setCutoff').value = s.cutoff_time;
+            document.getElementById('setCoordinator').value = s.coordinator_name || '';
             document.getElementById('setTimezone').value = s.timezone;
             document.getElementById('setWebhook').value = s.teams_webhook_url || '';
             
@@ -315,6 +335,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             office_level: document.getElementById('setLevel').value,
             reminder_time: document.getElementById('setReminder').value,
             cutoff_time: document.getElementById('setCutoff').value,
+            coordinator_name: document.getElementById('setCoordinator').value,
             timezone: document.getElementById('setTimezone').value,
             teams_webhook_url: document.getElementById('setWebhook').value,
             // Convert literal newlines to '\\n' for database storage

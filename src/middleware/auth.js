@@ -1,7 +1,11 @@
 const jwt = require('jsonwebtoken');
 const { sql } = require('../db');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_artisan_key';
+const JWT_SECRET = process.env.JWT_SECRET || (
+    process.env.NODE_ENV === 'production'
+        ? (() => { throw new Error('JWT_SECRET must be set in production!'); })()
+        : 'super_secret_artisan_key_dev_only'
+);
 
 async function verifyAdmin(req, res, next) {
     const token = req.cookies.admin_token;

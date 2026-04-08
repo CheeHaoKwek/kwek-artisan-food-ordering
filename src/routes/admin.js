@@ -6,6 +6,12 @@ const { verifyAdmin, JWT_SECRET } = require('../middleware/auth');
 
 const router = express.Router();
 
+// --- Shared Helper ---
+async function getActiveMenu() {
+    const { rows } = await sql`SELECT * FROM menus WHERE status IN ('active', 'closed') ORDER BY id DESC LIMIT 1`;
+    return rows[0] || null;
+}
+
 // --- Auth Routes ---
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;
@@ -62,13 +68,34 @@ router.get('/settings', verifyAdmin, async (req, res) => {
 });
 
 router.post('/settings', verifyAdmin, async (req, res) => {
-    const { company_name, office_level, teams_webhook_url, reminder_time, cutoff_time, timezone, vendor_message_template } = req.body;
-    
+    const { company_name, office_level, coordinator_name, teams_webhook_url, reminder_time, cutoff_time, timezone, vendor_message_template } = req.body;
+
+    // --- Input Validation ---
+    const timeRegex = /^\d{2}:\d{2}$/;
+    if (!company_name || !office_level || !coordinator_name || !reminder_time || !cutoff_time || !timezone || !vendor_message_template) {
+        return res.status(400).json({ error: 'All settings fields are required' });
+    }
+    if (!timeRegex.test(reminder_time) || !timeRegex.test(cutoff_time)) {
+        return res.status(400).json({ error: 'reminder_time and cutoff_time must be in HH:MM format' });
+    }
+    try {
+        // Validate timezone
+        Intl.DateTimeFormat(undefined, { timeZone: timezone });
+    } catch {
+        return res.status(400).json({ error: 'Invalid timezone identifier' });
+    }
+
     try {
         await sql`
             UPDATE app_settings 
-            SET company_name = ${company_name}, office_level = ${office_level}, teams_webhook_url = ${teams_webhook_url}, 
-                reminder_time = ${reminder_time}, cutoff_time = ${cutoff_time}, timezone = ${timezone}, vendor_message_template = ${vendor_message_template},
+            SET company_name = ${company_name},
+                office_level = ${office_level},
+                coordinator_name = ${coordinator_name},
+                teams_webhook_url = ${teams_webhook_url || null},
+                reminder_time = ${reminder_time},
+                cutoff_time = ${cutoff_time},
+                timezone = ${timezone},
+                vendor_message_template = ${vendor_message_template},
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = 1
         `;
@@ -83,9 +110,7 @@ router.post('/settings', verifyAdmin, async (req, res) => {
 // --- Dashboard Orders & Summary ---
 router.get('/orders', verifyAdmin, async (req, res) => {
     try {
-        const { rows: menuRows } = await sql`SELECT * FROM menus WHERE status IN ('active', 'closed') ORDER BY id DESC LIMIT 1`;
-        const menu = menuRows[0];
-        
+        const menu = await getActiveMenu();
         if (!menu) return res.json({ orders: [] });
 
         const { rows: orders } = await sql`SELECT * FROM orders WHERE menu_id = ${menu.id} ORDER BY created_at DESC`;
@@ -97,9 +122,7 @@ router.get('/orders', verifyAdmin, async (req, res) => {
 
 router.get('/summary', verifyAdmin, async (req, res) => {
     try {
-        const { rows: menuRows } = await sql`SELECT * FROM menus WHERE status IN ('active', 'closed') ORDER BY id DESC LIMIT 1`;
-        const menu = menuRows[0];
-        
+        const menu = await getActiveMenu();
         if (!menu) return res.json({ summary: null });
 
         const { rows: orders } = await sql`SELECT * FROM orders WHERE menu_id = ${menu.id}`;
@@ -157,9 +180,7 @@ router.get('/vendor-message', verifyAdmin, async (req, res) => {
         const { rows: settingsRows } = await sql`SELECT * FROM app_settings WHERE id = 1`;
         const settings = settingsRows[0];
         
-        const { rows: menuRows } = await sql`SELECT * FROM menus WHERE status IN ('active', 'closed') ORDER BY id DESC LIMIT 1`;
-        const menu = menuRows[0];
-        
+        const menu = await getActiveMenu();
         if (!menu) return res.status(400).json({ error: 'No active or closed menu available' });
 
         const { rows: orders } = await sql`SELECT * FROM orders WHERE menu_id = ${menu.id}`;
@@ -186,19 +207,24 @@ router.get('/vendor-message', verifyAdmin, async (req, res) => {
             }
         });
 
-        const itemsStr = Object.entries(allItemsCounts).map(([set, qty]) => `${set} x${qty}`).join(' ');
+        const itemsStr = Object.entries(allItemsCounts)
+            .sort((a, b) => a[0].localeCompare(b[0])) // Sort alphabetically so Set A is first
+            .map(([set, qty]) => `${set} x${qty}`)
+            .join(' ');
 
-        const orderLines = [];
-        orderLines.push(`Kwek - ${itemsStr}`);
+        // Use coordinator_name from settings (no more hardcoded "Kwek")
+        const coordinatorName = settings.coordinator_name || 'Admin';
+        const orderLines = [`${coordinatorName} - ${itemsStr}`];
         allRemarks.forEach(r => orderLines.push(r));
 
+        // Next day date calculation
         const dateObj = new Date();
-        dateObj.setDate(dateObj.getDate() + 1); // Vendor message is for tomorrow's order
+        dateObj.setDate(dateObj.getDate() + 1);
         const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const dayName = days[dateObj.getDay()];
         const formattedDate = `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
 
-        // Format cutoff time to 12h if needed (e.g. 08:00 -> 8:00am)
+        // Format cutoff time to 12h (e.g. 08:00 -> 8:00am)
         let cutoffDisplay = settings.cutoff_time || '';
         if (cutoffDisplay) {
             const [h, m] = cutoffDisplay.split(':').map(Number);
@@ -207,15 +233,25 @@ router.get('/vendor-message', verifyAdmin, async (req, res) => {
             cutoffDisplay = `${h12}:${String(m).padStart(2, '0')}${ampm}`;
         }
 
-        let message = settings.vendor_message_template;
-        message = message.replace(/{LEVEL}/g, settings.office_level || '');
-        message = message.replace(/{COMPANY_NAME}/g, settings.company_name || '');
-        message = message.replace(/{ORDER_LINES}/g, orderLines.join('\\n'));
-        message = message.replace(/{CUTOFF_TIME}/g, cutoffDisplay);
-        message = message.replace(/DAY/g, dayName);
-        message = message.replace(/DATE/g, formattedDate);
-
+        let message = settings.vendor_message_template || '';
+        
+        // Convert literal \n back to actual newlines
         message = message.replace(/\\n/g, '\n');
+
+        const replacements = {
+            'LEVEL': settings.office_level || '',
+            'COMPANY_NAME': settings.company_name || '',
+            'ORDER_LINES': orderLines.join('\n'),
+            'CUTOFF_TIME': cutoffDisplay,
+            'DAY': dayName,
+            'DATE': formattedDate
+        };
+
+        // Replace both {KEY} and KEY (for backward compatibility / ease of use)
+        for (const [key, val] of Object.entries(replacements)) {
+            const regex = new RegExp(`{${key}}|\\b${key}\\b`, 'g');
+            message = message.replace(regex, val);
+        }
 
         res.json({ message });
     } catch (e) {

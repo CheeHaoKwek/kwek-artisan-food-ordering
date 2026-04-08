@@ -1,27 +1,16 @@
 const express = require('express');
 const { sql } = require('../db');
+const { isPastCutoff } = require('../utils/time');
+const rateLimit = require('express-rate-limit');
 
 const router = express.Router();
 
-async function isPastCutoff() {
-    try {
-        const { rows } = await sql`SELECT cutoff_time, timezone FROM app_settings WHERE id = 1`;
-        const settings = rows[0];
-        if (!settings || !settings.cutoff_time) return false;
-        
-        const now = new Date();
-        const [cutoffHour, cutoffMin] = settings.cutoff_time.split(':').map(Number);
-        
-        const options = { timeZone: settings.timezone, hour12: false, hour: '2-digit', minute: '2-digit' };
-        const tzTimeStr = new Intl.DateTimeFormat('en-GB', options).format(now);
-        const [tzHour, tzMin] = tzTimeStr.split(':').map(Number);
-        
-        const nowMins = tzHour * 60 + tzMin;
-        const cutoffMins = cutoffHour * 60 + cutoffMin;
-        
-        return nowMins >= cutoffMins;
-    } catch (e) { return false; }
-}
+// Rate limiter: max 10 order submissions per IP per 15 minutes
+const orderLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: { error: 'Too many order submissions. Please try again later.' }
+});
 
 router.get('/colleagues', async (req, res) => {
     try {
@@ -51,6 +40,7 @@ router.get('/menu', async (req, res) => {
                 id: menu.id,
                 image_url: menu.image_url,
                 menu_date: menu.date,
+                set_b_name: menu.set_b_name || 'Set B',
                 closed: closed
             },
             config: {
@@ -63,11 +53,17 @@ router.get('/menu', async (req, res) => {
     }
 });
 
-router.post('/order', async (req, res) => {
+router.post('/order', orderLimiter, async (req, res) => {
     const { menu_id, guest_name, set_name, quantity, remark, add_meat, add_vege } = req.body;
     
     if (!menu_id || !guest_name || !set_name || !quantity) {
         return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Validate quantity: must be a positive integer between 1 and 10
+    const qty = Number(quantity);
+    if (!Number.isInteger(qty) || qty < 1 || qty > 10) {
+        return res.status(400).json({ error: 'Quantity must be a whole number between 1 and 10' });
     }
 
     try {
@@ -87,7 +83,7 @@ router.post('/order', async (req, res) => {
 
         await sql`
             INSERT INTO orders (menu_id, guest_name, set_name, quantity, remark, submission_ip, add_meat, add_vege)
-            VALUES (${menu_id}, ${guest_name.trim()}, ${set_name.trim()}, ${Number(quantity)}, ${remark ? remark.trim() : null}, ${ip}, ${add_meat ? 1 : 0}, ${add_vege ? 1 : 0})
+            VALUES (${menu_id}, ${guest_name.trim()}, ${set_name.trim()}, ${qty}, ${remark ? remark.trim() : null}, ${ip}, ${add_meat ? 1 : 0}, ${add_vege ? 1 : 0})
         `;
         res.json({ message: 'Order submitted successfully' });
     } catch (err) {

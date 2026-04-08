@@ -41,8 +41,6 @@
                         <label for="setName">Set Selection</label>
                         <select id="setName" class="form-control" required>
                             <option value="">Select a set...</option>
-                            <option value="Set A">Set A</option>
-                            <option value="Set B/C">Set B/C</option>
                         </select>
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
@@ -100,6 +98,29 @@
         </div>
     </div>
 
+    <!-- WFH Warning Modal -->
+    <div id="wfhWarningOverlay"
+        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 70; flex-direction:column; align-items: center; justify-content: center; padding: 1.5rem;">
+        <div class="glass-panel"
+            style="text-align: center; width: 100%; max-width: 400px; margin: 0 auto; animation: fadeIn 0.4s ease-out; position: relative;">
+            <h2 id="wfhWarningTitle" class="gradient-text" style="margin-bottom: 1rem; margin-top: 1rem; color: #ff9800;">Warning!</h2>
+            
+            <p id="wfhWarningText" style="margin-bottom: 1.5rem; color: var(--text-main); line-height: 1.5; font-weight: 500;">
+                Tmr is Tuesday, u sure u not work from home and come to office? Accident Order might be ignored.
+            </p>
+
+            <div style="margin-bottom: 1.5rem; border-radius: 8px; overflow: hidden; border: 1px solid var(--card-border);">
+                <img id="wfhWarningImage" src="/images/tuesday-warning.jpeg" alt="Warning"
+                    style="width: 100%; height: auto; display: block; object-fit: contain;">
+            </div>
+
+            <div style="display: flex; gap: 1rem;">
+                <button class="btn btn-outline" id="wfhBackBtn" style="flex: 1;">Go Back</button>
+                <button class="btn" style="background: var(--primary); flex: 2;" id="wfhConfirmBtn">Yes, I'm coming to office</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Order Confirmation Modal -->
     <div id="confirmOverlay"
         style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 60; flex-direction:column; align-items: center; justify-content: center; padding: 1.5rem;">
@@ -140,7 +161,7 @@
             </svg>
             <h2 style="color: var(--success); margin-bottom: 1rem;">Order Confirmed!</h2>
             <p style="color: var(--text-muted); margin-bottom: 2rem;">Your order has been successfully submitted.</p>
-            <button class="btn" onclick="location.reload()">Place Another Order</button>
+            <button class="btn" id="successReloadBtn">Place Another Order</button>
         </div>
     </div>
 

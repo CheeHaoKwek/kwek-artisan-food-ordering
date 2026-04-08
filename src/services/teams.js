@@ -119,7 +119,7 @@ async function sendMenuOpenedNotification() {
         if (!settings || !settings.teams_webhook_url) return;
 
         const payload = createAdaptiveCardPayload(
-            "🍔 Today's Lunch Menu is Open!", 
+            "🍔 Today's Lunch Menu is Open!",
             `The daily menu has been updated. Please check the portal and submit your orders.\n\n**Cutoff time: ${settings.cutoff_time}**`,
             false // @everyone mention disabled
         );
@@ -137,7 +137,7 @@ async function sendReminderNotification() {
         if (!settings || !settings.teams_webhook_url) return;
 
         const payload = createAdaptiveCardPayload(
-            "⏰ Last Call for Food Orders!", 
+            "⏰ Last Call for Food Orders!",
             `If you haven't ordered yet, please submit your orders as soon as possible before the cutoff time.\n\n**Cutoff is approaching at ${settings.cutoff_time}**`
         );
 
@@ -154,7 +154,7 @@ async function sendOrdersClosedNotification() {
         if (!settings || !settings.teams_webhook_url) return;
 
         const payload = createAdaptiveCardPayload(
-            "🔒 Ordering is now Closed", 
+            "🔒 Ordering is now Closed",
             "The administrator will consolidate the orders and send them to the vendor."
         );
 

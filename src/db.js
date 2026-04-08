@@ -44,6 +44,7 @@ async function initDB() {
                 id INTEGER PRIMARY KEY CHECK (id = 1),
                 company_name VARCHAR(255) NOT NULL,
                 office_level VARCHAR(255) NOT NULL,
+                coordinator_name VARCHAR(255) NOT NULL DEFAULT 'Kwek',
                 teams_webhook_url TEXT,
                 reminder_time VARCHAR(50) NOT NULL,
                 cutoff_time VARCHAR(50) NOT NULL,
@@ -52,6 +53,16 @@ async function initDB() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+        `;
+
+        // Migrate: add coordinator_name column for existing databases
+        await sql`
+            ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS coordinator_name VARCHAR(255) NOT NULL DEFAULT 'Kwek';
+        `;
+
+        // Migrate: add set_b_name column for menus
+        await sql`
+            ALTER TABLE menus ADD COLUMN IF NOT EXISTS set_b_name VARCHAR(255) NOT NULL DEFAULT 'Set B';
         `;
 
         await sql`
@@ -66,15 +77,16 @@ async function initDB() {
         if (settingsRows.length === 0) {
             await sql`
                 INSERT INTO app_settings (
-                    id, company_name, office_level, reminder_time, cutoff_time, timezone, vendor_message_template
+                    id, company_name, office_level, coordinator_name, reminder_time, cutoff_time, timezone, vendor_message_template
                 ) VALUES (
                     1, 
                     'Agmo Artisan', 
-                    'L8', 
+                    'L8',
+                    'Kwek',
                     '10:00', 
                     '11:00', 
                     'Asia/Kuala_Lumpur', 
-                    '1){office_level}\n{company_name}\n{ORDER_LINES}'
+                    'MBMR Order List\n{DAY} {DATE}\nClose order : {CUTOFF_TIME} of order date\n\nAttached payment receipt with the updated list:\n\n1) {LEVEL}\n{COMPANY_NAME}\n{ORDER_LINES}'
                 )
             `;
         }
