@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const warningImage = document.getElementById('wfhWarningImage');
 
             if (dayOfWeek === 2 || dayOfWeek === 5) { // Tuesday (2) or Friday (5)
-                warningText.innerHTML = `Tomorrow is <span style="font-size: 1.8rem; font-weight: 800; color: #ff9800; display: block; margin: 0.5rem 0;">${targetDayName}</span> 
+                warningText.innerHTML = `Tomorrow is <span style="font-size: 1.5rem; font-weight: 800; color: #ff9800;">${targetDayName}</span>. 
                 Are you sure you are coming to the office and not working from home? <br><br>
                 <span style="color: #ff4444; font-size: 0.9rem;">* Accidental payment will be considered as donation~~.</span>`;
                 
