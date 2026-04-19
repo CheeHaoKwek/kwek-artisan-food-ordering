@@ -39,6 +39,15 @@ const publicRoutes = require('./src/routes/public');
 const teamsService = require('./src/services/teams');
 const mailer = require('./src/services/mailer');
 
+app.use(async (req, res, next) => {
+    try {
+        await initDB();
+        next();
+    } catch (err) {
+        next(err);
+    }
+});
+
 app.use('/api/admin', adminRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/public', publicRoutes);
