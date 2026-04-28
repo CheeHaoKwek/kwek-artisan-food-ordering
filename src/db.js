@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+const bcrypt = require('bcryptjs');
 
 // Standard PostgreSQL pool — works with Supabase, Neon, Railway, or any Postgres host
 const pool = new Pool({
@@ -134,6 +135,15 @@ async function initDB() {
             for (const name of defaultColleagues) {
                 await sql`INSERT INTO colleagues (name) VALUES (${name}) ON CONFLICT DO NOTHING`;
             }
+        }
+
+        // Seed admin user from environment variables
+        const { rows: userRows } = await sql`SELECT id FROM users LIMIT 1`;
+        if (userRows.length === 0) {
+            const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+            const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+            const hashedPassword = await bcrypt.hash(adminPassword, 10);
+            await sql`INSERT INTO users (username, password) VALUES (${adminUsername}, ${hashedPassword}) ON CONFLICT DO NOTHING`;
         }
 
         // Plant the DB-level flag so future cold starts skip all of the above
