@@ -1,9 +1,41 @@
-const { sql } = require('@vercel/postgres');
+const { Pool } = require('pg');
 
-let initialized = false;
+// Standard PostgreSQL pool — works with Supabase, Neon, Railway, or any Postgres host
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+});
+
+// Drop-in replacement for @vercel/postgres `sql` template tag.
+// Returns { rows, rowCount } to match the original API used across all routes.
+const sql = async (strings, ...values) => {
+    let text = '';
+    strings.forEach((str, i) => {
+        text += str;
+        if (i < values.length) {
+            text += `$${i + 1}`;
+        }
+    });
+    const result = await pool.query(text, values);
+    return { rows: result.rows, rowCount: result.rowCount };
+};
 
 async function initDB() {
-    if (initialized) return;
+    // Check a lightweight DB-level flag so we only run full init once,
+    // even across multiple Vercel cold starts / serverless instances.
+    // This reduces cold-start queries from 10+ down to just 1.
+    try {
+        const { rows } = await sql`
+            SELECT 1 FROM information_schema.tables 
+            WHERE table_name = 'db_initialized' LIMIT 1
+        `;
+        if (rows.length > 0) {
+            // Already initialized — skip all setup queries
+            return;
+        }
+    } catch (e) {
+        // If the check itself fails, fall through to full init
+    }
 
     try {
         await sql`
@@ -72,7 +104,7 @@ async function initDB() {
             );
         `;
 
-        // Check app settings
+        // Seed app settings
         const { rows: settingsRows } = await sql`SELECT * FROM app_settings WHERE id = 1`;
         if (settingsRows.length === 0) {
             await sql`
@@ -91,7 +123,7 @@ async function initDB() {
             `;
         }
 
-        // Check colleagues
+        // Seed colleagues
         const { rows: colleagueRows } = await sql`SELECT id FROM colleagues LIMIT 1`;
         if (colleagueRows.length === 0) {
             const defaultColleagues = [
@@ -104,7 +136,10 @@ async function initDB() {
             }
         }
 
-        initialized = true;
+        // Plant the DB-level flag so future cold starts skip all of the above
+        await sql`CREATE TABLE IF NOT EXISTS db_initialized (initialized_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`;
+        await sql`INSERT INTO db_initialized DEFAULT VALUES`;
+
         console.log("Database initialized on PostgreSQL.");
     } catch (e) {
         console.error("Database initialization failed:", e.message);
